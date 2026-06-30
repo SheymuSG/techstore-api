@@ -1,23 +1,50 @@
-version: '3.8'
 services:
-  postgres:
-    image: postgres:15
-    container_name: techstore_db
+  # 1. Servicio LocalStack (Emulador de AWS SQS para pruebas locales)
+  localstack:
+    image: localstack/localstack:latest
+    container_name: localstack_techstore
+    ports:
+      - "4566:4566"
     environment:
-      POSTGRES_DB: techstore
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin123
+      - SERVICES=sqs
+      - AWS_DEFAULT_REGION=us-east-1
+    volumes:
+      - "./localstack-data:/var/lib/localstack"
+
+  # 2. Base de Datos Local (PostgreSQL) - Usada en la Evaluación 2
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: techstore_db
     ports:
       - "5432:5432"
-  
-  microservicio:
-    build: .
-    container_name: techstore_api
-    ports:
-      - "8080:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/techstore
-      SPRING_DATASOURCE_USERNAME: admin
-      SPRING_DATASOURCE_PASSWORD: admin123
+      - POSTGRES_DB=techstore
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=tu_password_aqui
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 3. Microservicio TechStore API (Backend)
+  techstore-api:
+    build:
+      context: .        # Asegúrate de estar ejecutando el comando donde esté tu código y Dockerfile
+      dockerfile: Dockerfile
+    ports:
+      - [cite_start]"8080:8080"     # Expone el puerto exigido por la rúbrica [cite: 179, 185]
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/techstore
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=tu_password_aqui
+      - AWS_REGION=us-east-1
+      - AWS_ENDPOINT_URL=http://localstack:4566
     depends_on:
-      - postgres
+      - postgres-db
+      - localstack
+    # Configuración de escalabilidad para cumplir con la rúbrica general (IE8) 
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+
+volumes:
+  postgres_data:
