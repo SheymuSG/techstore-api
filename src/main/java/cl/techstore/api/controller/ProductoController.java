@@ -29,8 +29,8 @@ public class ProductoController {
     @Autowired
     private SqsClient sqsClient;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    // Corrección: Instanciamos el ObjectMapper directamente para evitar el error de inyección de Spring
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     // Leemos la URL de la cola desde las propiedades. Si no se define, usa el valor por defecto de AWS real.
     @Value("${aws.sqs.queue-url:https://sqs.us-east-1.amazonaws.com/123456789012/techstore-audit-queue}")
